@@ -1,0 +1,330 @@
+/*style.css*/
+body {
+  margin: 0px;
+
+  padding: 0px;
+
+  font-family: "Arial", Helvetica, sans-serif;
+}
+
+h1,
+h2 {
+  font-family: Cambria, Cochin, Georgia, Times, "Times New Roman", serif;
+}
+
+.navbar .navbar-brand {
+  padding: 5px;
+
+  margin-left: 0.8rem;
+
+  margin-right: 1rem;
+
+  font-family: "Times New Roman", serif;
+}
+
+.nav-link {
+  margin-left: 1rem;
+}
+
+/* Target the list items that hold the email and the Logout link */
+.navbar-nav.ms-auto .nav-item {
+  /* Reduce horizontal spacing between list items */
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+/* Target the nav-link for the Logout button */
+.navbar-nav.ms-auto .nav-link {
+  /* Reduce font size for smaller text */
+  font-size: 0.9rem; /* Adjust this value as needed (e.g., 0.8rem for smaller) */
+  /* Reduce default Bootstrap padding to pull it closer to the left */
+  padding-left: 0.5rem;
+  padding-right: 0.9rem;
+}
+
+/* Target the span element that displays the email address */
+.navbar-nav.ms-auto .nav-item span.nav-link {
+  /* Apply the same reduced font size */
+  font-size: 0.9rem;
+  /* Apply padding adjustments to match the link's position */
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.navbar-link  
+/* If you are using the .btn-sm class on your button, refine its padding */
+.btn-sm {
+  padding: 0.2rem 0.6rem;
+
+  font-size: 0.9rem;
+}
+
+ul.products {
+  padding: 0;
+
+  margin: 0;
+
+  max-width: 740px;
+
+  margin-left: auto;
+
+  margin-right: auto;
+}
+
+ul.products li {
+  display: inline-block;
+
+  max-width: 200px;
+
+  padding: 10px;
+
+  background-color: #ffffff;
+
+  margin: 10px;
+
+  border: 1px solid #eaeaea;
+
+  color: #3d3d3d;
+}
+
+ul.products li h3 {
+  margin: -10px -10px 10px -10px;
+
+  padding: 10px;
+
+  text-align: center;
+
+  background-color: #f5f5f5;
+
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+
+  font-size: 1.1em;
+
+  color: #5a5a5a;
+}
+
+ul.products li fieldset {
+  border: none;
+
+  padding: 5px 5px 5px 0px;
+
+  margin: 0;
+}
+
+ul.products li fieldset label {
+  display: block;
+
+  margin-bottom: 4px;
+}
+
+ul.products li fieldset label span {
+  width: 80px;
+
+  float: left;
+}
+
+ul.products li fieldset label select {
+  min-width: 100px;
+}
+
+button,
+.button {
+  background-color: #39b3d7;
+
+  min-width: 100px;
+
+  border: none;
+
+  padding: 10px;
+
+  display: inline-block;
+
+  text-align: center;
+
+  cursor: pointer;
+
+  text-decoration: none;
+
+  color: #fff;
+
+  min-height: 15px;
+
+  font: 12px/15px Arial, Helvetica, sans-serif;
+
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.26);
+
+  border-radius: 3px;
+}
+
+button:hover,
+.button:hover {
+  background-color: #44c7ed;
+}
+
+.product-thumb {
+  text-align: center;
+}
+
+.product-desc {
+  font-style: italic;
+
+  font-size: 0.8em;
+
+  margin-bottom: 4px;
+
+  height: 40px;
+
+  overflow: hidden;
+
+  margin-top: 5px;
+}
+
+ul.shopping-cart {
+  position: fixed;
+
+  top: 100px;
+
+  right: 0;
+
+  background-color: #f9f9f9;
+
+  padding: 10px;
+
+  min-width: 250px;
+
+  list-style: none;
+
+  font-size: 0.8em;
+
+  border: 1px solid #f0f0f0;
+}
+
+ul.shopping-cart .cart-itm {
+  margin-bottom: 10px;
+
+  border-bottom: 1px solid #ddd;
+
+  padding-bottom: 8px;
+}
+
+ul.shopping-cart .cart-itm:last-child {
+  border-bottom: none;
+
+  margin-bottom: 0px;
+}
+
+ul.shopping-cart .cart-itm .remove-itm {
+  float: right;
+
+  font-size: 1.5em;
+}
+
+ul.shopping-cart .cart-itm .remove-itm a {
+  text-decoration: none;
+
+  color: #000;
+}
+
+.cart-total-text a {
+  float: right;
+}
+
+.cart-view-table-front {
+  font-size: 0.7em;
+
+  position: fixed;
+
+  right: 10px;
+
+  max-width: 350px;
+
+  font-family: Arial;
+}
+
+.cart-view-table-front h3 {
+  text-align: center;
+
+  padding: 0;
+
+  margin: 0px 0px 6px 0px;
+}
+
+.cart-view-table-front,
+.cart-view-table-back {
+  max-width: 700px;
+
+  background-color: #ffffff;
+
+  margin-left: auto;
+
+  margin-right: auto;
+
+  padding: 10px;
+
+  box-shadow: 1px 1px 15px rgba(0, 0, 0, 0.12);
+
+  border: 1px solid #e4e4e4;
+}
+
+.cart-view-table-front table th,
+.cart-view-table-back table th {
+  text-align: left;
+}
+
+.cart-view-table-front table thead,
+.cart-view-table-back table thead {
+  background-color: #9ccdfd;
+}
+
+.cart-view-table-front table tbody tr.even,
+.cart-view-table-back table tbody tr.even {
+  background-color: #f7f7f7;
+}
+
+.cart-view-table-front table tbody tr.odd,
+.cart-view-table-back table tbody tr.odd {
+  background-color: #ededed;
+}
+
+.cart-view-table-front button,
+.cart-view-table-front .button,
+.cart-view-table-back button,
+.cart-view-table-back .button {
+  margin: 10px 1px;
+
+  float: right;
+}
+
+.product-thumb {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.product-thumb img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.product-thumb img.hover-img {
+  opacity: 0; /* hidden by default */
+  z-index: 2;
+}
+
+.product-thumb img.main-img {
+  z-index: 1;
+}
+
+.product-thumb:hover img.main-img {
+  opacity: 0; /* fade out main */
+}
+
+.product-thumb:hover img.hover-img {
+  opacity: 1; /* fade in hover */
+}
