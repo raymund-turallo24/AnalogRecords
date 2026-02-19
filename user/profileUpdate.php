@@ -3,131 +3,169 @@ session_start();
 include("../includes/header.php");
 include("../includes/config.php");
 
-// Check if user is logged in
-if (!isset($_SESSION['account_id'])) {
+$account_id = $_SESSION['account_id'] ?? null;
+$role       = $_SESSION['role'] ?? null;
+
+if (!$account_id || $role !== 'customer') {
     header("Location: ../login.php");
     exit();
 }
 
-$account_id = $_SESSION['account_id'];
-
-// Fetch existing user info
-$sql = "SELECT first_name, last_name, contact, address, image 
-        FROM customer_details 
-        WHERE account_id = ?";
+// Fetch current data
+$sql = "SELECT first_name, last_name, contact, address, image FROM customer_details WHERE account_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $account_id);
 $stmt->execute();
 $result = $stmt->get_result();
+$existing_user_data = $result->fetch_assoc();
+$stmt->close();
 
-if ($result->num_rows === 0) {
-    echo "<div class='alert alert-danger'>User details not found.</div>";
-    exit();
-}
-
-$user = $result->fetch_assoc();
-
-// Handle form submission
-if (isset($_POST['update'])) {
-    // Only overwrite fields if user entered something; otherwise keep old value
-    $first_name = !empty(trim($_POST['first_name'])) ? trim($_POST['first_name']) : $user['first_name'];
-    $last_name  = !empty(trim($_POST['last_name'])) ? trim($_POST['last_name']) : $user['last_name'];
-    $contact    = !empty(trim($_POST['contact'])) ? trim($_POST['contact']) : $user['contact'];
-    $address    = !empty(trim($_POST['address'])) ? trim($_POST['address']) : $user['address'];
-    $image_name = $user['image']; // Keep existing image by default
-
-    // Handle file upload
-    if (!empty($_FILES['image']['name'])) {
-        $target_dir = "../uploads/";
-        $file_name = basename($_FILES["image"]["name"]);
-        $target_file = $target_dir . $file_name;
-        $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
-
-        // Validate file type
-        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
-        if (!in_array($imageFileType, $allowed_types)) {
-            $error = "Only JPG, JPEG, PNG & GIF files are allowed.";
-        } elseif ($_FILES["image"]["size"] > 2 * 1024 * 1024) { // 2MB limit
-            $error = "File size must be less than 2MB.";
-        } else {
-            // Move uploaded file
-            if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
-                $image_name = $file_name;
-            } else {
-                $error = "Failed to upload image.";
-            }
-        }
-    }
-
-    // Update database if no error
-    if (!isset($error)) {
-        $update_sql = "UPDATE customer_details 
-                       SET first_name = ?, last_name = ?, contact = ?, address = ?, image = ?
-                       WHERE account_id = ?";
-        $update_stmt = $conn->prepare($update_sql);
-        $update_stmt->bind_param("sssssi", $first_name, $last_name, $contact, $address, $image_name, $account_id);
-
-        if ($update_stmt->execute()) {
-            $success = "Profile updated successfully!";
-            // Refresh user data
-            $user['first_name'] = $first_name;
-            $user['last_name'] = $last_name;
-            $user['contact'] = $contact;
-            $user['address'] = $address;
-            $user['image'] = $image_name;
-        } else {
-            $error = "Failed to update profile. Please try again.";
-        }
-    }
-}
+// Profile image
+$has_image = !empty($existing_user_data['image']) && file_exists("../uploads/" . $existing_user_data['image']);
+$image_path = $has_image 
+    ? "../uploads/" . $existing_user_data['image'] 
+    : "https://via.placeholder.com/150/2d3436/ffffff?text=No+Image";
+$img_class = $has_image ? "profile-img-thumb rounded-circle" : "img-account-profile rounded-circle";
 ?>
 
-<div class="container mt-5">
-    <h2 class="mb-4">Update Profile</h2>
+<!-- Force white text + left-aligned labels -->
+<style>
+    .white-text-card * { color: white !important; }
+    .white-text-card .card-header-crud {
+        background: rgba(255,255,255,0.05);
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .white-text-card .alert-info {
+        background: rgba(13,110,253,0.25) !important;
+        border-color: rgba(13,110,253,0.5) !important;
+    }
+    .white-text-card .text-muted { color: rgba(255,255,255,0.7) !important; }
 
-    <?php if (isset($error)): ?>
-        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
-    <?php endif; ?>
-    <?php if (isset($success)): ?>
-        <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
-    <?php endif; ?>
+    /* Left-align all form labels */
+    .white-text-card label {
+        text-align: left !important;
+        display: block;
+        width: 100%;
+    }
+</style>
 
-    <div class="card p-4 shadow-sm" style="max-width: 600px;">
-        <form method="POST" enctype="multipart/form-data">
-            <!-- Profile Image -->
-            <div class="text-center mb-3">
-                <img src="<?php echo !empty($user['image']) ? '../uploads/'.htmlspecialchars($user['image']) : '../uploads/default.png'; ?>" 
-                     alt="Profile Picture" class="rounded-circle mb-2" width="120" height="120">
-                <input type="file" name="image" class="form-control">
+<div class="container-fluid site-content-wrapper">
+    <h1 class="crud-title mt-4 mb-4">Update Profile</h1>
+    
+    <nav class="nav nav-borders profile-nav">
+        <a class="nav-link active ms-0" href="#"><i class="fas fa-user-circle me-1"></i> Profile Setup</a>
+    </nav>
+    
+    <hr class="mt-0 mb-4 form-divider">
+    <?php include("../includes/alert.php"); ?>
+
+    <div class="row">
+        <!-- Profile Picture -->
+        <div class="col-xl-4 mb-4">
+            <div class="card card-crud h-100">
+                <div class="card-header-crud">Profile Picture</div>
+                <div class="card-body-crud text-center p-4">
+                    <img id="currentProfileImage"
+                         class="<?php echo $img_class; ?> mb-3"
+                         src="<?php echo htmlspecialchars($image_path); ?>"
+                         alt="Profile Picture"
+                         style="width:150px; height:150px; object-fit:cover; border:3px solid #555;">
+                    <div class="small text-muted mt-2">
+                        JPG/PNG • Max 5MB
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <div class="mb-3">
-                <label for="first_name" class="form-label">First Name</label>
-                <input type="text" name="first_name" class="form-control" id="first_name" 
-                       value="<?php echo htmlspecialchars($user['first_name']); ?>" placeholder="Enter first name">
+        <!-- Form Card - White Text + Left-Aligned Labels -->
+        <div class="col-xl-8 mb-4">
+            <div class="card card-crud h-100 white-text-card">
+                <div class="card-header-crud">Account Details</div>
+                <div class="card-body-crud p-4">
+
+                    <div class="alert alert-info small mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>All fields are optional.</strong> Leave blank to keep current info.
+                    </div>
+
+                    <form action="store.php" method="POST" enctype="multipart/form-data" class="crud-form" novalidate>
+                        <input type="hidden" name="account_id" value="<?php echo htmlspecialchars($account_id); ?>">
+
+                        <!-- Hidden original values -->
+                        <input type="hidden" name="original_first_name" value="<?php echo htmlspecialchars($existing_user_data['first_name'] ?? ''); ?>">
+                        <input type="hidden" name="original_last_name"  value="<?php echo htmlspecialchars($existing_user_data['last_name'] ?? ''); ?>">
+                        <input type="hidden" name="original_contact"    value="<?php echo htmlspecialchars($existing_user_data['contact'] ?? ''); ?>">
+                        <input type="hidden" name="original_address"    value="<?php echo htmlspecialchars($existing_user_data['address'] ?? ''); ?>">
+                        <input type="hidden" name="original_image_name" value="<?php echo htmlspecialchars($existing_user_data['image'] ?? ''); ?>">
+
+                        <div class="form-group mb-4">
+                            <label class="small mb-1" for="profile_image">Upload New Profile Image (Optional)</label>
+                            <input class="form-control custom-input" id="profile_image" type="file" name="image" accept="image/*">
+                        </div>
+
+                        <!-- First Name & Last Name -->
+                        <div class="row gx-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="first_name">First Name</label>
+                                <input class="form-control custom-input" id="first_name" type="text"
+                                       placeholder="Leave blank to keep current" 
+                                       name="first_name" value="">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="last_name">Last Name</label>
+                                <input class="form-control custom-input" id="last_name" type="text"
+                                       placeholder="Leave blank to keep current" 
+                                       name="last_name" value="">
+                            </div>
+                        </div>
+
+                        <!-- Address & Phone -->
+                        <div class="row gx-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="address">Address</label>
+                                <input class="form-control custom-input" id="address" type="text"
+                                       placeholder="Leave blank to keep current" 
+                                       name="address" value="">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small mb-1" for="contact">Phone Number</label>
+                                <input class="form-control custom-input" id="contact" type="tel"
+                                       placeholder="Leave blank to keep current" 
+                                       name="contact" value="">
+                            </div>
+                        </div>
+
+                        <button class="btn login-btn" type="submit" name="submit">
+                            <i class="fas fa-save me-1"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
             </div>
-
-            <div class="mb-3">
-                <label for="last_name" class="form-label">Last Name</label>
-                <input type="text" name="last_name" class="form-control" id="last_name" 
-                       value="<?php echo htmlspecialchars($user['last_name']); ?>" placeholder="Enter last name">
-            </div>
-
-            <div class="mb-3">
-                <label for="contact" class="form-label">Contact</label>
-                <input type="text" name="contact" class="form-control" id="contact" 
-                       value="<?php echo htmlspecialchars($user['contact']); ?>" placeholder="Enter contact">
-            </div>
-
-            <div class="mb-3">
-                <label for="address" class="form-label">Address</label>
-                <textarea name="address" class="form-control" id="address" placeholder="Enter address"><?php echo htmlspecialchars($user['address']); ?></textarea>
-            </div>
-
-            <button type="submit" name="update" class="btn btn-primary">Update Profile</button>
-            <a href="profile.php" class="btn btn-secondary">Cancel</a>
-        </form>
+        </div>
     </div>
 </div>
+
+<!-- Live Preview -->
+<script>
+document.getElementById('profile_image')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        this.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const img = document.getElementById('currentProfileImage');
+        img.src = ev.target.result;
+        img.classList.remove('img-account-profile');
+        img.classList.add('profile-img-thumb');
+    };
+    reader.readAsDataURL(file);
+});
+</script>
 
 <?php include("../includes/footer.php"); ?>

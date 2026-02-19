@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 include("../includes/header.php");
@@ -6,12 +5,13 @@ include("../includes/config.php");
 
 $account_id = $_SESSION['account_id'] ?? null;
 
+// Security check: If not logged in, redirect
 if (!$account_id) {
     header("Location: ../login.php");
     exit();
 }
 
-// Fetch existing user info including uploaded image
+// Fetch existing user info
 $sql = "SELECT first_name, last_name, contact, address, image 
         FROM customer_details 
         WHERE account_id = ?";
@@ -19,75 +19,87 @@ $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $account_id);
 $stmt->execute();
 $result = $stmt->get_result();
-
 $user = $result->fetch_assoc();
+$stmt->close();
+
+if (!$user) {
+    $_SESSION['error'] = "User details not found. Please complete your profile.";
+    header("Location: profileUpdate.php"); // Redirect to update/setup page
+    exit();
+}
+
+// Fallback logic for image path
 $image_path = !empty($user['image']) && file_exists("../uploads/" . $user['image'])
               ? "../uploads/" . $user['image']
-              : "https://via.placeholder.com/150?text=No+Image"; // fallback placeholder
+              : "https://via.placeholder.com/150/343a40/ffffff?text=User"; // Dark theme placeholder
 ?>
 
-<div class="container-xl px-4 mt-4">
-    <?php include("../includes/alert.php"); ?>
-    <nav class="nav nav-borders">
-        <a class="nav-link active ms-0" href="#">Profile Setup</a>
-    </nav>
-    <hr class="mt-0 mb-4">
-    <div class="row">
-        <div class="col-xl-4">
-            <div class="card mb-4 mb-xl-0">
-                <div class="card-header">Profile Picture</div>
-                <div class="card-body text-center">
-                    <!-- Display existing or placeholder image -->
-                    <img class="img-account-profile rounded-circle mb-2"
-                         src="<?php echo htmlspecialchars($image_path); ?>"
-                         alt="Profile Picture"
-                         width="150" height="150">
+<div class="container-fluid site-content-wrapper">
 
-                    <div class="small font-italic text-muted mb-3">
-                        JPG or PNG no larger than 5 MB
-                    </div>
+    <h1 class="crud-title mt-4 mb-4">My Account Profile</h1>
+    
+    <nav class="nav nav-borders profile-nav">
+        <a class="nav-link active ms-0" href="#"><i class="fas fa-user-circle me-1"></i> Profile Overview</a>
+    </nav>
+    
+    <hr class="mt-0 mb-4 form-divider">
+
+    <?php include("../includes/alert.php"); ?>
+    
+    <div class="row">
+        <div class="col-xl-4 mb-4">
+            <div class="card card-crud h-100">
+                <div class="card-header-crud">Profile Picture</div>
+                <div class="card-body-crud text-center p-4">
+                    
+                    <img class="img-account-profile profile-img-thumb rounded-circle mb-3"
+                         src="<?php echo htmlspecialchars($image_path); ?>"
+                         alt="Profile Picture">
+
+                    <h4 class="text-white mb-2">
+                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                    </h4>
+                    
+                    <a href="profileUpdate.php" class="btn login-btn mt-3">
+                        <i class="fas fa-edit me-1"></i> Edit Profile Details
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT COLUMN: Account Details -->
-        <div class="col-xl-8">
-            <div class="card mb-4">
-                <div class="card-header">Account Details</div>
-                <div class="card-body">
-                    <form action="store.php" method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="account_id" value="<?php echo $account_id; ?>">
-
-                        <!-- Upload image field -->
-                        <div class="mb-3">
-                            <label class="small mb-1">Profile Image</label>
-                            <input class="form-control" type="file" name="image" accept="image/*">
+        <div class="col-xl-8 mb-4">
+            <div class="card card-crud h-100">
+                <div class="card-header-crud">Personal Information</div>
+                <div class="card-body-crud p-4">
+                    
+                    <div class="row info-display-grid">
+                        
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-secondary small">First Name:</strong>
+                            <p class="text-white fs-5"><?= htmlspecialchars($user['first_name']) ?></p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-secondary small">Last Name:</strong>
+                            <p class="text-white fs-5"><?= htmlspecialchars($user['last_name']) ?></p>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-secondary small">Contact Number:</strong>
+                            <p class="text-white fs-5"><i class="fas fa-phone me-2 text-success"></i><?= htmlspecialchars($user['contact']) ?></p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong class="text-secondary small">Account ID:</strong>
+                            <p class="text-white fs-5"><?= htmlspecialchars($account_id) ?></p>
                         </div>
 
-                        <div class="row gx-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="small mb-1">First name</label>
-                                <input class="form-control" type="text" placeholder="Enter your first name" name="first_name" value="<?php echo htmlspecialchars($user['first_name']); ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="small mb-1">Last name</label>
-                                <input class="form-control" type="text" placeholder="Enter your last name" name="last_name" value="<?php echo htmlspecialchars($user['last_name']); ?>" required>
+                        <div class="col-12 mb-3">
+                            <strong class="text-secondary small">Shipping Address:</strong>
+                            <div class="p-3 mt-1 profile-address-box">
+                                <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                                <span class="text-white"><?= htmlspecialchars($user['address']) ?></span>
                             </div>
                         </div>
-
-                        <div class="row gx-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="small mb-1">Address</label>
-                                <input class="form-control" type="text" placeholder="Enter your address" name="address" value="<?php echo htmlspecialchars($user['address']); ?>" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="small mb-1">Phone number</label>
-                                <input class="form-control" type="tel" placeholder="Enter your phone number" name="contact" value="<?php echo htmlspecialchars($user['contact']); ?>" required>
-                            </div>
-                        </div>
-
-                        <button class="btn btn-primary" type="submit" name="submit">Save changes</button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,64 +1,102 @@
 <?php
 session_start();
 
+
+ob_start(); 
+
 include('../includes/header.php');
 include('../includes/config.php');
-// print_r($_POST);
-if (isset($_POST["type"]) && $_POST["type"] == 'add' && $_POST["item_qty"] > 0) {
-    foreach ($_POST as $key => $value) { //add all post vars to new_product array
-        $new_product[$key] = $value;
-    }
-    // print_r($new_product);
-    unset($new_product['type']);
-    // print_r($new_product);
 
-    $sql =  "SELECT i.item_id AS itemId, description, img_path, sell_price FROM item i INNER JOIN stock s USING (item_id) WHERE i.item_id = 
-    {$new_product['item_id']} LIMIT 1 ";
-    // echo $sql;
-    $result = mysqli_query($conn, $sql);
-    $num_rows = mysqli_num_rows($result);
-    // echo "<p>There are currently $num_rows rows in the table</p>";
-    $row = mysqli_fetch_assoc($result);
-    $new_product["item_name"] = $row['description'];
-    $new_product["item_price"] = $row['sell_price'];
-     print_r($new_product);
-    if (isset($_SESSION["cart_products"])) {
-        if (isset($_SESSION["cart_products"][$new_product['item_id']])) {
-            unset($_SESSION["cart_products"][$new_product['item_id']]);
+// adding item logic
+// Check if the request is to ADD ng item and kapag valid ang item ID
+if (isset($_POST["type"]) && $_POST["type"] == 'add' && isset($_POST["item_id"])) {
+
+    $item_id = intval($_POST['item_id']);
+    $quantity_to_add = intval($_POST['item_qty'] ?? 1); 
+
+    // check if valid ang quantity
+    if ($quantity_to_add < 1) {
+        $quantity_to_add = 1;
+    }
+
+    if ($item_id > 0) {
+        
+        $sql = "
+            SELECT 
+                i.item_id AS itemId,
+                i.title,
+                i.price,
+                img.image AS img_path
+            FROM item i
+            INNER JOIN stock s ON i.item_id = s.item_id
+            LEFT JOIN item_images img ON i.item_id = img.item_id
+            WHERE i.item_id = ?
+            LIMIT 1
+        ";
+
+        $stmt = mysqli_prepare($conn, $sql);
+        mysqli_stmt_bind_param($stmt, "i", $item_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+
+        if ($row) {
+            
+            $product_data = [
+                "item_id"    => $item_id,
+                "item_qty"   => $quantity_to_add,
+                "item_name"  => $row['title'],
+                "item_price" => $row['price'],
+                "item_image" => $row['img_path'],
+            ];
+            
+            if (isset($_SESSION["cart_products"][$item_id])) {
+                $_SESSION["cart_products"][$item_id]["item_qty"] += $quantity_to_add;
+            } else {
+                $_SESSION["cart_products"][$item_id] = $product_data;
+            }
+
+            header("Location: ../item/show.php?id=" . $item_id . "&status=added");
+            ob_end_flush();
+            exit();
         }
     }
-    // cart_products[1] = $new_product
-    print_r($_SESSION);
-    $_SESSION["cart_products"][$new_product['item_id']] = $new_product;
-    echo "print <pre>";
-    print_r($_SESSION);
-    echo "print </pre>";
-    
+    header('Location: ../index.php');
+    ob_end_flush();
+    exit();
 }
 
+// update/remove item logic
 if (isset($_POST["product_qty"]) || isset($_POST["remove_code"])) {
-    var_dump($_POST["remove_code"]);
-    //update item quantity in product session
 
+    // Update quantity
     if (isset($_POST["product_qty"]) && is_array($_POST["product_qty"])) {
-
         foreach ($_POST["product_qty"] as $key => $value) {
-            if (is_numeric($value)) {
-                // var_dump( $key, $value);
-                $_SESSION["cart_products"][$key]["item_qty"] = $value;
+            $safe_qty = intval($value);
+            if ($safe_qty > 0) {
+                // makes sure quantity is updated correctly as an integer
+                $_SESSION["cart_products"][$key]["item_qty"] = $safe_qty;
+            } else {
+                // Remove item kung ang quantity ay nakaset sa 0 or negative
+                unset($_SESSION["cart_products"][$key]);
             }
         }
     }
 
-    if (is_array($_POST["remove_code"]) ) {
+    // Remove item
+    if (isset($_POST["remove_code"]) && is_array($_POST["remove_code"])) {
         foreach ($_POST["remove_code"] as $key) {
-            // var_dump($key);
             unset($_SESSION["cart_products"][$key]);
         }
     }
-    echo "<pre>";
-    print_r($_SESSION['cart_products']);
-    echo "</pre>";
-
+    
+    header('Location: view_cart.php');
+    ob_end_flush();
+    exit();
 }
+
 header('Location: ../index.php');
+ob_end_flush();
+exit();
+?>

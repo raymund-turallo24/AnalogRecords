@@ -1,22 +1,18 @@
 <?php
 session_start();
-include("../includes/header.php");
 include("../includes/config.php");
 
-// Handle form submission
 if (isset($_POST['submit'])) {
-    $email = trim($_POST['email']);
-    $pass = trim($_POST['password']);
+    $email = trim($_POST['email'] ?? '');
+    $pass  = trim($_POST['password'] ?? '');
 
     $errors = [];
 
-    // Server-side validation
     if (empty($email)) $errors[] = "Email is required.";
-    if (empty($pass)) $errors[] = "Password is required.";
+    if (empty($pass))  $errors[] = "Password is required.";
 
     if (empty($errors)) {
-        // Fetch account info
-        $sql = "SELECT account_id, email, password, role FROM accounts WHERE email=? LIMIT 1";
+        $sql = "SELECT account_id, email, password, role, status FROM accounts WHERE email=? LIMIT 1";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -25,13 +21,13 @@ if (isset($_POST['submit'])) {
         if ($result->num_rows === 1) {
             $row = $result->fetch_assoc();
 
-            if (password_verify($pass, $row['password'])) {
-                // Set session variables
+            if ($row['status'] !== 'active') {
+                $errors[] = "Your account is inactive. Please contact the administrator.";
+            } elseif (password_verify($pass, $row['password'])) {
                 $_SESSION['account_id'] = $row['account_id'];
-                $_SESSION['email'] = $row['email'];
-                $_SESSION['role'] = $row['role'];
+                $_SESSION['email']      = $row['email'];
+                $_SESSION['role']       = $row['role'];
 
-                // If customer, fetch customer_id
                 if ($row['role'] === 'customer') {
                     $sql2 = "SELECT customer_id FROM customer_details WHERE account_id=?";
                     $stmt2 = $conn->prepare($sql2);
@@ -61,23 +57,67 @@ if (isset($_POST['submit'])) {
     }
 }
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <link href="/AnalogRecords/includes/style/style.css" rel="stylesheet" type="text/css">
+    <title>Analog Records - Login</title>
 
-<div class="row col-md-8 mx-auto">
-    <?php include("../includes/alert.php"); ?>
-    <form action="" method="POST">
-        <div class="form-outline mb-4">
-            <input type="text" class="form-control" name="email" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
-            <label class="form-label">Email address</label>
-        </div>
-        <div class="form-outline mb-4">
-            <input type="password" class="form-control" name="password" />
-            <label class="form-label">Password</label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block mb-4" name="submit">Sign in</button>
-        <div class="text-center">
-            <p>Not a member? <a href="register.php">Register</a></p>
-        </div>
-    </form>
-</div>
+    <style>
+        /* Permanently disable any green checkmark icons (just in case) */
+        .form-control.is-valid,
+        .was-validated .form-control:valid {
+            background-image: none !important;
+        }
+        .valid-feedback { display: none !important; }
+    </style>
+</head>
 
-<?php include("../includes/footer.php"); ?>
+<body class="login-page-body">
+    <div class="login-container">
+        <div class="logo-placeholder">
+           <a href="/AnalogRecords/index.php" class="text-white text-decoration-none h4">Analog Records</a>
+        </div>
+
+        <h1 class="welcome-text">Welcome back</h1>
+        
+        <?php 
+        if (isset($_SESSION['message'])) {
+            echo '<div class="alert alert-danger" role="alert">' . $_SESSION['message'] . '</div>';
+            unset($_SESSION['message']);
+        }
+        ?>
+
+        <!-- Super clean form – zero client-side anything -->
+        <form action="" method="POST" class="login-form">
+            
+            <div class="mb-3">
+                <label for="email" class="form-label input-label">Email or username</label>
+                <input type="text" 
+                       id="email" 
+                       name="email" 
+                       class="form-control custom-input"
+                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
+            </div>
+            
+            <div class="mb-4">
+                <label for="password" class="form-label input-label">Password</label>
+                <input type="password" 
+                       id="password" 
+                       name="password" 
+                       class="form-control custom-input" />
+            </div>
+
+            <button type="submit" class="btn continue-btn" name="submit">Continue</button>
+            
+            <div class="text-center mt-4">
+                <p>Not a member? <a href="register.php" class="text-decoration-none">Register</a></p>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
